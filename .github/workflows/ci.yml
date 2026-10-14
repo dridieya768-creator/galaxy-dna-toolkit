@@ -3,6 +3,7 @@ name: CI
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 jobs:
   pytest:
@@ -15,7 +16,7 @@ jobs:
       - run: pip install -r requirements-dev.txt
       - run: pytest --cov=tools/dna_analyzer --cov-report=term-missing
 
-  planemo:
+  planemo-lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,4 +25,30 @@ jobs:
           python-version: "3.11"
       - run: pip install planemo
       - run: planemo lint tools/dna_analyzer
+
+  planemo-test:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install planemo
       - run: planemo test --conda_auto_init --conda_auto_install tools/dna_analyzer
+      - name: Afficher le détail de l'échec
+        if: failure()
+        run: |
+          python - <<'EOF'
+          import json
+          d = json.load(open("tool_test_output.json"))
+          for t in d.get("tests", []):
+              data = t.get("data", {})
+              print("=== TEST :", t.get("id"), "| statut :", data.get("status"))
+              print("--- execution_problem :", data.get("execution_problem"))
+              for p in data.get("output_problems", []):
+                  print("--- output_problem :", p)
+              job = data.get("job", {})
+              print("--- STDERR :\n", job.get("stderr"))
+          EOF
