@@ -1,4 +1,4 @@
-# Galaxy DNA Toolkit
+# Outil Galaxy d'analyse de séquences ADN
 
 Outil [Galaxy](https://galaxyproject.org/) d'analyse de séquences ADN, développé en Python (Biopython) et R (ggplot2), intégré via un wrapper XML et testé avec Planemo.
 
