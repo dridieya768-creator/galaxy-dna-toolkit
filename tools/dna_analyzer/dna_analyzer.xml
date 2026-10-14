@@ -1,0 +1,88 @@
+<tool id="dna_sequence_analyzer" name="Analyse de séquences ADN" version="0.1.0" profile="21.05">
+    <description>GC par fenêtre glissante, k-mers et ORFs (6 cadres de lecture)</description>
+    <requirements>
+        <requirement type="package" version="1.83">biopython</requirement>
+        <requirement type="package" version="4.3">r-base</requirement>
+        <requirement type="package" version="3.5.1">r-ggplot2</requirement>
+    </requirements>
+    <command detect_errors="exit_code"><![CDATA[
+        python '$__tool_directory__/dna_analyzer.py'
+            --input '$input_fasta'
+            --window $window
+            --step $step
+            --kmer $kmer
+            --min-orf $min_orf
+            --out-gc '$gc_table'
+            --out-kmer '$kmer_table'
+            --out-orf '$orf_table'
+        &&
+        Rscript '$__tool_directory__/plots.R'
+            '$gc_table' '$kmer_table' '$orf_table'
+            '$gc_plot' '$kmer_plot' '$orf_plot'
+    ]]></command>
+    <inputs>
+        <param name="input_fasta" type="data" format="fasta" label="Séquences ADN (FASTA)"/>
+        <param name="window" type="integer" value="100" min="1" label="Taille de la fenêtre GC (pb)"/>
+        <param name="step" type="integer" value="50" min="1" label="Pas de la fenêtre GC (pb)"/>
+        <param name="kmer" type="integer" value="3" min="1" max="8" label="Taille des k-mers"/>
+        <param name="min_orf" type="integer" value="100" min="9" label="Longueur minimale d'un ORF (nt, codon stop inclus)"/>
+    </inputs>
+    <outputs>
+        <data name="gc_table" format="tabular" label="GC fenêtre glissante sur ${on_string}"/>
+        <data name="kmer_table" format="tabular" label="k-mers sur ${on_string}"/>
+        <data name="orf_table" format="tabular" label="ORFs sur ${on_string}"/>
+        <data name="gc_plot" format="png" label="Tracé GC sur ${on_string}"/>
+        <data name="kmer_plot" format="png" label="Tracé k-mers sur ${on_string}"/>
+        <data name="orf_plot" format="png" label="Tracé ORFs sur ${on_string}"/>
+    </outputs>
+    <tests>
+        <test expect_num_outputs="6">
+            <param name="input_fasta" value="example.fasta"/>
+            <param name="window" value="100"/>
+            <param name="step" value="50"/>
+            <param name="kmer" value="3"/>
+            <param name="min_orf" value="100"/>
+            <output name="gc_table">
+                <assert_contents>
+                    <has_text text="seq1_test"/>
+                    <has_text text="seq2_random"/>
+                    <has_n_lines n="15"/>
+                </assert_contents>
+            </output>
+            <output name="kmer_table">
+                <assert_contents>
+                    <has_text text="GCT"/>
+                </assert_contents>
+            </output>
+            <output name="orf_table">
+                <assert_contents>
+                    <has_text_matching expression="seq1_test\t\+1\t151\t276\t126"/>
+                </assert_contents>
+            </output>
+            <output name="gc_plot">
+                <assert_contents><has_size min="2000"/></assert_contents>
+            </output>
+            <output name="kmer_plot">
+                <assert_contents><has_size min="2000"/></assert_contents>
+            </output>
+            <output name="orf_plot">
+                <assert_contents><has_size min="2000"/></assert_contents>
+            </output>
+        </test>
+    </tests>
+    <help><![CDATA[
+**Ce que fait l'outil**
+
+À partir d'un fichier FASTA (une ou plusieurs séquences d'ADN), l'outil produit :
+
+* **GC (%)** par fenêtre glissante (taille et pas configurables) ;
+* **fréquences de k-mers** (k de 1 à 8) ;
+* **ORFs** (ATG → codon stop) sur les **6 cadres de lecture**, avec la protéine traduite ;
+* trois **tracés** (R / ggplot2) : profil GC, top 20 des k-mers, carte des ORFs.
+
+Les positions sont en base 1. Les bases ambiguës (N...) sont ignorées dans le calcul du GC et des k-mers.
+    ]]></help>
+    <citations>
+        <citation type="doi">10.1093/bioinformatics/btp163</citation>
+    </citations>
+</tool>
